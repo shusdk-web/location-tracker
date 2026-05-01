@@ -200,7 +200,7 @@ export default function App() {
             onClick={() => {
               drive.saveClientId(cidInput);
               drive.initGIS(cidInput);
-              setTimeout(() => drive.signIn(), 1000);
+              setTimeout(() => drive.signIn(), 300);
             }}
             disabled={!cidInput.trim()}
           >
