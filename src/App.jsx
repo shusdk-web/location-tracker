@@ -122,7 +122,7 @@ export default function App() {
   const [tab, setTab] = useState("register"); // register | history
   const [form, setForm] = useState({ name: "", status: "外出", location: "", note: "" });
   const [filter, setFilter] = useState({ name: "", status: "" });
-  const [cidInput, setCidInput] = useState(drive.clientId);
+  const [cidInput, setCidInput] = useState(() => localStorage.getItem(CLIENT_ID_KEY) || "");
   const [toast, setToast] = useState(null);
   const [loadedOnce, setLoadedOnce] = useState(false);
 
