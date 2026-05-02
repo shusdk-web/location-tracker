@@ -33,6 +33,7 @@ const STATUS_COLORS = {
 };
 
 const AUTO_INTERVAL_MS = 30 * 60 * 1000;
+const NAME_KEY = "lt_saved_name";
 
 const nowISO = () => new Date().toISOString();
 const fmt = (iso) => {
@@ -68,17 +69,29 @@ export default function App() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState("register");
-  const [form, setForm] = useState({ name: "", status: "外出", location: "", note: "" });
+  const [form, setForm] = useState({
+    name: localStorage.getItem(NAME_KEY) || "",
+    status: "外出",
+    location: "",
+    note: ""
+  });
   const [filter, setFilter] = useState({ name: "", status: "" });
   const [toast, setToast] = useState(null);
   const [geoLoading, setGeoLoading] = useState(false);
   const [autoMode, setAutoMode] = useState(false);
   const [nextAutoIn, setNextAutoIn] = useState(null);
+  const [showSleepWarning, setShowSleepWarning] = useState(false);
   const autoTimerRef = useRef(null);
   const countdownRef = useRef(null);
   const formRef = useRef(form);
 
   useEffect(() => { formRef.current = form; }, [form]);
+
+  // 氏名が変わったらlocalStorageに保存
+  const handleNameChange = (name) => {
+    setForm(f => ({ ...f, name }));
+    if (name.trim()) localStorage.setItem(NAME_KEY, name);
+  };
 
   const showToast = (msg, type = "ok") => {
     setToast({ msg, type });
@@ -149,6 +162,7 @@ export default function App() {
       return;
     }
     setAutoMode(true);
+    setShowSleepWarning(true);
     showToast("自動登録を開始しました（30分ごと）");
     doRegister(formRef.current);
 
@@ -168,6 +182,7 @@ export default function App() {
   const stopAutoMode = () => {
     setAutoMode(false);
     setNextAutoIn(null);
+    setShowSleepWarning(false);
     clearInterval(autoTimerRef.current);
     clearInterval(countdownRef.current);
     showToast("自動登録を停止しました");
@@ -199,6 +214,14 @@ export default function App() {
       )}
       {loading && <div style={styles.loadingBar} />}
 
+      {/* スマホスリープ警告 */}
+      {showSleepWarning && (
+        <div style={styles.sleepWarning}>
+          ⚠️ スマホの画面をオフにすると自動登録が止まります。画面をつけたままにしてください。
+          <button style={styles.sleepClose} onClick={() => setShowSleepWarning(false)}>✕</button>
+        </div>
+      )}
+
       <header style={styles.header}>
         <span style={styles.logoText}>📍</span>
         <span style={styles.headerTitle}>Location Tracker</span>
@@ -224,7 +247,18 @@ export default function App() {
             <h2 style={styles.cardTitle}>居場所を登録</h2>
 
             <Field label="氏名 *">
-              <input style={styles.input} value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="山田 太郎" />
+              <div style={{ position: "relative" }}>
+                <input
+                  style={styles.input}
+                  value={form.name}
+                  onChange={e => handleNameChange(e.target.value)}
+                  placeholder="山田 太郎"
+                />
+                {localStorage.getItem(NAME_KEY) && (
+                  <span style={styles.savedBadge}>💾 保存済み</span>
+                )}
+              </div>
+              <p style={styles.hint}>入力した氏名は次回から自動で表示されます</p>
             </Field>
 
             <Field label="ステータス">
@@ -262,7 +296,12 @@ export default function App() {
             </Field>
 
             <Field label="備考">
-              <textarea style={{...styles.input, height: 72, resize: "vertical"}} value={form.note} onChange={e => setForm({...form, note: e.target.value})} placeholder="帰社予定: 17:00" />
+              <textarea
+                style={{...styles.input, height: 72, resize: "vertical"}}
+                value={form.note}
+                onChange={e => setForm({...form, note: e.target.value})}
+                placeholder="帰社予定: 17:00"
+              />
             </Field>
 
             <button style={styles.primaryBtn} onClick={handleSubmit} disabled={loading}>
@@ -348,6 +387,7 @@ const styles = {
   label: { display: "block", fontSize: 13, fontWeight: 600, color: "#94a3b8", marginBottom: 6 },
   input: { width: "100%", background: "#0f172a", border: "1px solid #334155", borderRadius: 8, color: "#e2e8f0", fontSize: 15, padding: "10px 12px", boxSizing: "border-box", outline: "none" },
   hint: { fontSize: 12, color: "#475569", marginTop: 6, lineHeight: 1.6 },
+  savedBadge: { position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "#10b981" },
   geoBtn: { background: "#1e3a5f", border: "1px solid #334155", borderRadius: 8, color: "#e2e8f0", fontSize: 20, width: 44, cursor: "pointer", flexShrink: 0 },
   statusGrid: { display: "flex", flexWrap: "wrap", gap: 8 },
   statusBtn: { padding: "7px 14px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" },
@@ -358,6 +398,8 @@ const styles = {
   countdown: { fontSize: 13, color: "#38bdf8", marginBottom: 10, textAlign: "center" },
   autoBtn: { width: "100%", background: "#1e3a5f", color: "#38bdf8", border: "1px solid #38bdf8", borderRadius: 8, padding: "10px 0", fontSize: 14, fontWeight: 700, cursor: "pointer" },
   stopBtn: { width: "100%", background: "#3f1515", color: "#ef4444", border: "1px solid #ef4444", borderRadius: 8, padding: "10px 0", fontSize: 14, fontWeight: 700, cursor: "pointer" },
+  sleepWarning: { background: "#78350f", color: "#fcd34d", padding: "12px 16px", fontSize: 13, display: "flex", alignItems: "center", gap: 8, lineHeight: 1.5 },
+  sleepClose: { marginLeft: "auto", background: "none", border: "none", color: "#fcd34d", fontSize: 16, cursor: "pointer", flexShrink: 0 },
   filterRow: { display: "flex", gap: 10, marginBottom: 16 },
   recCard: { background: "#1e293b", borderRadius: 12, padding: "14px 16px", marginBottom: 10, borderLeft: "3px solid #38bdf8" },
   recTop: { display: "flex", alignItems: "center", gap: 10, marginBottom: 6 },
